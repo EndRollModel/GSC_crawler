@@ -24,7 +24,7 @@ good smile crawler
 1. 點選左側資料庫內容按下+按鈕 貼上此指令id
     `1ReeQ6WO8kKNxoaA_O0XEQ589cIrRvEBA9qcWpNqdOP17i47u6N9M5Xh0`     
     按下確定選擇最新的版本的cheerio     
-2. 複製 [Index.gs](https://github.com/EndRollModel/GSC_crawler/blob/index.gs) 內的程式碼貼上於右側程式編輯區 按下ctrl + s儲存程式碼
+2. 複製 [Index.gs](https://github.com/EndRollModel/GSC_crawler/blob/master/index.gs) 內的程式碼貼上於右側程式編輯區 按下ctrl + s儲存程式碼
 3. 將試算表id貼上至程式碼第五行內 `let spreadsheet = SpreadsheetApp.openById('貼到這裡')`         
 4. 將Line Channel access token 貼至第六行 `let lineToken = '貼到這裡'`   
 5. 選擇上方函式內容 選擇 getGSCstore 點選一下執行 等待執行完成 現在可以檢查一下試算表內是否已經有資料了   
