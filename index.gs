@@ -102,11 +102,12 @@ function getGSCstore() {
     const updateTimeFormat = Utilities.formatDate(updateTime, 'Asia/Taipei', 'yyyy-MM-dd HH:mm');
 
     const lastTimeObject = infoSheet.getRange(`B2`).getValue();
+    const lastTimeArr = infoSheet.getRange(`B3`).getValue();
     if (lastTimeObject != null) {
         if (lastTimeObject !== infoObjSize) { //比對數字不同
             infoSheet.getRange(`C2`).setValue(updateTimeFormat);
             infoSheet.getRange(`D2`).setValue(lastTimeObject);
-            infoSheet.getRange(`D3`).setValue(JSON.stringify(infoArr));
+            infoSheet.getRange(`D3`).setValue(lastTimeArr)
             const productNumber = infoObjSize - lastTimeObject;
             if (productNumber > 0) {
                 pushMessage(flexNewProTitle(newProduct(productNumber))); //比較差異後推播新產品訊息
