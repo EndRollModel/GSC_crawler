@@ -73,13 +73,18 @@ function getGSCstore() {
     const dateEnd = Date.now();
 
     let infoObjSize = 0; // 更新用物件
+    let infoArr = [];
 
     const sheetObjList = [];
     for (let i = 0; i < totalInfo.length; i++) {
         for (let j = 0; j < totalInfo[i].data.nameList.length; j++) {
             sheetObjList.push([totalInfo[i].data.nameList[j], totalInfo[i].data.numList[j], totalInfo[i].data.urlList[j], totalInfo[i].data.picList[j], totalInfo[i].directions, i]);
         }
-        infoObjSize += totalInfo[i].data.nameList.length; // 紀錄每個物件的最大值 比對用
+        if(i === 0){
+            infoObjSize = totalInfo[i].data.nameList.length; // 僅紀錄最新一筆的內容 比對用
+        }
+        // infoObjSize += totalInfo[i].data.nameList.length; // 紀錄每個物件的最大值 比對用
+        infoArr.push(totalInfo[i].data.nameList.length) // 紀錄每個物件數量
     }
     showLog(`format : ${(dateEnd - dateStart) / 1000} Sec`);
     // 刪除原有資料覆蓋
@@ -101,6 +106,7 @@ function getGSCstore() {
         if (lastTimeObject !== infoObjSize) { //比對數字不同
             infoSheet.getRange(`C2`).setValue(updateTimeFormat);
             infoSheet.getRange(`D2`).setValue(lastTimeObject);
+            infoSheet.getRange(`D3`).setValue(JSON.stringify(infoArr));
             const productNumber = infoObjSize - lastTimeObject;
             if (productNumber > 0) {
                 pushMessage(flexNewProTitle(newProduct(productNumber))); //比較差異後推播新產品訊息
@@ -108,6 +114,7 @@ function getGSCstore() {
         }
     }
     infoSheet.getRange(`A2:B2`).setValues([[updateTimeFormat, infoObjSize]]); // 寫入更新時間
+    infoSheet.getRange(`B3`).setValue(JSON.stringify(infoArr)); // 寫入數量
 }
 
 /**
