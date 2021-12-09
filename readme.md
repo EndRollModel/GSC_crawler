@@ -24,7 +24,7 @@ good smile crawler
 1. 點選左側資料庫內容按下+按鈕 貼上此指令id
     `1ReeQ6WO8kKNxoaA_O0XEQ589cIrRvEBA9qcWpNqdOP17i47u6N9M5Xh0`     
     按下確定選擇最新的版本的cheerio     
-2. 複製 [Index.gs](https://github.com/EndRollModel/GSC_crawler/blob/index.gs) 內的程式碼貼上於右側程式編輯區 按下ctrl + s儲存程式碼
+2. 複製 [Index.gs](https://github.com/EndRollModel/GSC_crawler/blob/master/index.gs) 內的程式碼貼上於右側程式編輯區 按下ctrl + s儲存程式碼
 3. 將試算表id貼上至程式碼第五行內 `let spreadsheet = SpreadsheetApp.openById('貼到這裡')`         
 4. 將Line Channel access token 貼至第六行 `let lineToken = '貼到這裡'`   
 5. 選擇上方函式內容 選擇 getGSCstore 點選一下執行 等待執行完成 現在可以檢查一下試算表內是否已經有資料了   
@@ -32,7 +32,7 @@ good smile crawler
 7. 點選部署 > 新增部署作業 > 誰可以存取改為任何人 按下部署 完成後複製網頁應用程式的網址 
 8. 至LineBot管理後台Webhook URL貼上步驟6的網址 按下verift 若寫success則部署完成 
 9. 加入你的機器人 指令如下!(關鍵字) 可搜尋所有商品內容 @(關鍵字)可搜尋當月商品
-10. 需要接收訊息的人對機器人呼叫#紀錄 之後機器人會主動通知
+10. 需要接收訊息的人對機器人呼叫`#紀錄`or`#record` 登記使用者名稱後 之後機器人會主動通知
 
 ### ＊注意事項       
 1. 使用#紀錄的人盡量不要大於5人 因好微笑當月發布商品時若超過一百件 Linebot主動推播訊息無法超過500則(免費額度) 超過額度時則不發送訊息
