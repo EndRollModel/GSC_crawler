@@ -6,10 +6,10 @@ good smile crawler
 
 ~~每次好微笑發佈商品時總是錯過 ？ 試試看這個吧~~
 
-主要功能： 主動通知使用者好微笑更新產品訊息, 並且可查詢目前有販售之產品            
+主要功能： 主動通知使用者好微笑更新產品訊息, 並且可查詢此年度有販售之產品            
 
 ### 架設方式：       
-基本準備: 一組已經申請LineBot的Line帳號 和 在google雲端硬碟內建立 google app script 與 google試算表      
+基本準備: 一組已經申請LineBot的Line帳號 和 在google雲端硬碟內建立 google app script 與 一份記錄資料用的google試算表      
 
 #### Line部分:
 1. 申請機器人服務      
@@ -17,7 +17,7 @@ good smile crawler
 
 #### 試算表部分:      
 1. 複製試算表內的id 如：       
-`https://docs.google.com/spreadsheets/d/這裡的id/edit#gid=0`   
+`https://docs.google.com/spreadsheets/d/'這裡的id'/edit#gid=0`   
 複製該處的id
 
 #### script部分 :      
@@ -37,7 +37,9 @@ good smile crawler
 ### ＊注意事項       
 1. 使用#紀錄的人盡量不要大於5人 因好微笑當月發布商品時若超過一百件 Linebot主動推播訊息無法超過500則(免費額度) 超過額度時則不發送訊息
 
-2. 若架設有困難的人 可以參考[此篇教學](https://www.letswrite.tw/line-bot-gas-monitor/)
+2. 若架設有困難的人 可以google [gas line bot] 等相關資訊確認
+
+3. 定時功能建議於整點2-5分之間設定 會比較快速抓取該內容
 
 ### 使用技術
 本篇提供懶人架設法 若有需要自行修改其內容時請參考以下來源       
