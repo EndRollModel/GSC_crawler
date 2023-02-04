@@ -15,6 +15,30 @@ let userSheet = spreadsheet.getSheetByName(sheetNameObj[2]); // 使用者資訊 
  * -------------------------------------------------------------------------------------------------------*/
 
 /**
+ * 自動建立 Sheet 的內容
+ * auto create sheet tag & key
+ */
+function checkSheet() {
+    if (productSheet == null) {
+        const rename = spreadsheet.getSheets()[0];
+        rename.setName(sheetNameObj[0]);
+        rename.getRange("A1:F1").setValues([["name", "num", "url", "pic", "directions", "index"]]);
+    }
+    if (infoSheet == null) {
+        const insert = spreadsheet.insertSheet();
+        insert.setName(sheetNameObj[1]);
+        insert.getRange("A1:D1").setValues([["data", "update", "lastTime", "lastTimeNum"]]);
+        spreadsheet.moveActiveSheet(2);
+    }
+    if (userSheet == null) {
+        const insert = spreadsheet.insertSheet();
+        insert.setName(sheetNameObj[2])
+        insert.getRange("A1:C1").setValues([["userId", "display", "userPic"]]);
+        spreadsheet.moveActiveSheet(3);
+    }
+}
+
+/**
  * get GSC page data
  * 取得所有資料 function 半小時就會自動更新
  */
@@ -28,7 +52,7 @@ function getGSCstore() {
     let response = UrlFetchApp.fetch(url);
     const reqEndTime = Date.now();
     showLog(`Page request : ${(reqEndTime - reqStartTime) / 1000} Sec`); // request time
-    let $ = Cheerio.load(response.getContentText(), {decodeEntities: false});
+    let $ = Cheerio.load(response.getContentText(), { decodeEntities: false });
     //-------------------
     const dateStart = Date.now();
     const directionsList = [];
@@ -68,7 +92,7 @@ function getGSCstore() {
             itemList.urlList.push($(item).eq(i).find('a').attr('href'))
             productCount++;
         }
-        totalInfo.push({directions: directionsList[index], data: itemList})
+        totalInfo.push({ directions: directionsList[index], data: itemList })
     })
     const dateEnd = Date.now();
 
@@ -80,12 +104,13 @@ function getGSCstore() {
         for (let j = 0; j < totalInfo[i].data.nameList.length; j++) {
             sheetObjList.push([totalInfo[i].data.nameList[j], totalInfo[i].data.numList[j], totalInfo[i].data.urlList[j], totalInfo[i].data.picList[j], totalInfo[i].directions, i]);
         }
-        if(i === 0){
+        if (i === 0) {
             infoObjSize = totalInfo[i].data.nameList.length; // 僅紀錄最新一筆的內容 比對用
         }
         // infoObjSize += totalInfo[i].data.nameList.length; // 紀錄每個物件的最大值 比對用
         infoArr.push(totalInfo[i].data.nameList.length) // 紀錄每個物件數量
     }
+    // showLog(`infoArr: ${infoObjSize}`);
     showLog(`format : ${(dateEnd - dateStart) / 1000} Sec`);
     // 刪除原有資料覆蓋
     const delStartTime = Date.now();
@@ -103,6 +128,7 @@ function getGSCstore() {
 
     const lastTimeObject = infoSheet.getRange(`B2`).getValue();
     const lastTimeArr = infoSheet.getRange(`B3`).getValue();
+    // showLog(`lastTimeArr :${lastTimeObject}`);
     if (lastTimeObject != null) {
         if (lastTimeObject !== infoObjSize) { //比對數字不同
             infoSheet.getRange(`C2`).setValue(updateTimeFormat);
@@ -110,36 +136,13 @@ function getGSCstore() {
             infoSheet.getRange(`D3`).setValue(lastTimeArr)
             const productNumber = infoObjSize - lastTimeObject;
             if (productNumber > 0) {
-                pushMessage(flexNewProTitle(newProduct(productNumber))); //比較差異後推播新產品訊息
+                showLog(`product update num =${productNumber}`);
+                pushMessage(flexNewProTitle(newProduct(productNumber)), productNumber); //比較差異後推播新產品訊息
             }
         }
     }
     infoSheet.getRange(`A2:B2`).setValues([[updateTimeFormat, infoObjSize]]); // 寫入更新時間
     infoSheet.getRange(`B3`).setValue(JSON.stringify(infoArr)); // 寫入數量
-}
-
-/**
- * 自動建立 Sheet 的內容
- * auto create sheet tag & key
- */
-function checkSheet() {
-    if (productSheet == null) {
-        const rename = spreadsheet.getSheets()[0];
-        rename.setName(sheetNameObj[0]);
-        rename.getRange("A1:F1").setValues([["name", "num", "url", "pic", "directions", "index"]]);
-    }
-    if (infoSheet == null) {
-        const insert = spreadsheet.insertSheet();
-        insert.setName(sheetNameObj[1]);
-        insert.getRange("A1:D1").setValues([["data", "update", "lastTime", "lastTimeNum"]]);
-        spreadsheet.moveActiveSheet(2);
-    }
-    if (userSheet == null) {
-        const insert = spreadsheet.insertSheet();
-        insert.setName(sheetNameObj[2])
-        insert.getRange("A1:C1").setValues([["userId", "display", "userPic"]]);
-        spreadsheet.moveActiveSheet(3);
-    }
 }
 
 /**
@@ -202,13 +205,28 @@ function searchMonthProduct(target) {
  * check have new product
  */
 function newProduct(number) {
-    if (number > 10) number = 10;
+    // if (number > 10) number = 10;
+    // const proInfo = productSheet.getRange(`A2:E${number + 1}`).getValues();
+    // const contents = [];
+    // proInfo.forEach((elem) => {
+    //   contents.push(newProMsgModel(elem[0], elem[1], elem[2], elem[3], elem[4]));
+    // })
+    // return contents;
+    if (number > 40) number = 40; // 最多40個內容
     const proInfo = productSheet.getRange(`A2:E${number + 1}`).getValues();
-    const contents = [];
-    proInfo.forEach((elem) => {
-        contents.push(newProMsgModel(elem[0], elem[1], elem[2], elem[3], elem[4]))
+    const totalContents = [];
+    let contents = [];
+    proInfo.forEach((elem, index) => {
+        if (index !== 0 && index % 10 == 0) {
+            totalContents.push(contents);
+            contents = [];
+        }
+        contents.push(newProMsgModel(elem[0], elem[1], elem[2], elem[3], elem[4]));
+        if (index == proInfo.length - 1) {
+            totalContents.push(contents);
+        }
     })
-    return contents;
+    return totalContents;
 }
 
 /**
@@ -256,9 +274,9 @@ function doPost(e) {
     if (userMessage == '' || userMessage == undefined) return; // 傳空訊息或是非文字訊息
     let searchType = -1;
     const commandType = {
-        allProduct: {index: 0, keyword: "!"}, // 全商品搜尋
-        month: {index: 1, keyword: "@"}, // 該月商品搜尋
-        command: {index: 2, keyword: "#"} // 指令操控
+        allProduct: { index: 0, keyword: "!" }, // 全商品(現年度)搜尋
+        month: { index: 1, keyword: "@" }, // 該月商品搜尋
+        command: { index: 2, keyword: "#" } // 指令操控
     }
     switch (userMessage[0]) {
         case commandType.allProduct.keyword: // 全搜尋
@@ -311,7 +329,7 @@ function doPost(e) {
     };
     let option = {
         method: 'post',
-        headers: {Authorization: 'Bearer ' + lineToken},
+        headers: { Authorization: 'Bearer ' + lineToken },
         contentType: 'application/json',
         payload: JSON.stringify(data)
     };
@@ -364,7 +382,7 @@ function getUserInfog(userId) {
  * 推播
  * push message
  */
-function pushMessage(message) {
+function pushMessage(message, number) {
     const getMaxuserIndex = userSheet.getLastRow() > 3 ? 3 : userSheet.getLastRow();
     try {
         const users = userSheet.getRange(`A2:A${getMaxuserIndex}`).getValues();
@@ -373,9 +391,11 @@ function pushMessage(message) {
         const msgbody = [];
         msgbody.push({
             type: "text",
-            text: `有${message.contents.contents.length}個商品上架囉！`
+            text: `有${number}個商品上架囉！`
         });
-        msgbody.push(message);
+        message.forEach((e) => {
+            msgbody.push(e)
+        })
         users.forEach((elem) => {
             userList.push(elem[0]);
         })
@@ -397,7 +417,6 @@ function pushMessage(message) {
     }
     return;
 }
-
 
 /** ------------------------------------------------------------------------------------------------------
  *  Other
@@ -451,13 +470,25 @@ function flexTitle(body) {
 }
 
 function flexNewProTitle(body) {
-    const title = {}
-    title.type = 'flex';
-    title.altText = '新商品上架囉！';
-    title.contents = {};
-    title.contents.type = 'carousel';
-    title.contents.contents = body;
-    return title
+    // const title = {}
+    // title.type = 'flex';
+    // title.altText = '新商品上架囉！';
+    // title.contents = {};
+    // title.contents.type = 'carousel';
+    // title.contents.contents = body;
+    // return title
+    //---------------
+    const proTitles = [];
+    body.forEach((elem) => {
+        const title = {}
+        title.type = 'flex';
+        title.altText = '新商品上架囉！';
+        title.contents = {};
+        title.contents.type = 'carousel';
+        title.contents.contents = elem;
+        proTitles.push(title);
+    })
+    return proTitles
 }
 
 function allProMsgModel(title, num, url, image, text) {
