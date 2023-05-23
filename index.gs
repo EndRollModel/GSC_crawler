@@ -1,14 +1,18 @@
 /**
  * config
  */
-let url = 'https://www.goodsmile.info/zh/products/announced'; // all product - you can get all lang product - edit (zh - 中文, ja - jp, en - eng)
-let spreadsheet = SpreadsheetApp.openById(''); // set sheet id
-let lineToken = ''; // set your line bot token
+const sheetId = PropertiesService.getScriptProperties().getProperty('sheetId');
+const baseUrl = 'https://www.goodsmile.info'; // gsc baseurl
+const resUrl = 'https://www.goodsmile.info/zh/releaseinfo';
+const url = 'https://www.goodsmile.info/zh/products/announced'; // all product - you can get all lang product - edit (zh - 中文, ja - jp, en - eng)
+const spreadsheet = SpreadsheetApp.openById(sheetId); // set sheet id
+const lineToken = PropertiesService.getScriptProperties().getProperty('lineToken'); // set your line bot token
 
-const sheetNameObj = ["GSCProduct", "GSCInformation", "UserInfo"]; // sheet page name
+const sheetNameObj = ["GSCProduct", "GSCInformation", "UserInfo", "ResInfo"]; // sheet page name
 let productSheet = spreadsheet.getSheetByName(sheetNameObj[0]); // 所有商品資訊 - all product information - GSCProduct
 let infoSheet = spreadsheet.getSheetByName(sheetNameObj[1]); // 下載時的資訊 - update information - GSCInformation
-let userSheet = spreadsheet.getSheetByName(sheetNameObj[2]); // 使用者資訊 - UserInfo
+let userSheet = spreadsheet.getSheetByName(sheetNameObj[2]); // 使用者資訊 - userInfo
+let resInfoSheet = spreadsheet.getSheetByName(sheetNameObj[3]); // 出貨資訊 - resInfo
 
 /** ------------------------------------------------------------------------------------------------------
  *  Sheet 區塊
@@ -36,11 +40,18 @@ function checkSheet() {
         insert.getRange("A1:C1").setValues([["userId", "display", "userPic"]]);
         spreadsheet.moveActiveSheet(3);
     }
+    if (resInfoSheet == null) {
+        const insert = spreadsheet.insertSheet();
+        insert.setName(sheetNameObj[3])
+        insert.getRange("A1:G1").setValues([["year", "month", "day", "productName", "url", "memo", "jan"]]);
+        spreadsheet.moveActiveSheet(4);
+    }
 }
 
 /**
  * get GSC page data
- * 取得所有資料 function 半小時就會自動更新
+ * 取得所有資料 function 手動設定計時器更新 / 官網更新時間約在GMT+8的上午11點
+ * 所以定時器推薦設定每日中午過後 一天運作一次即可 但若有特殊需求 也是建議兩到四小時左右一次即可
  */
 function getGSCstore() {
     if (spreadsheet === null) { // 若沒取得任何表格則不開始此動作 not set sheet id
@@ -52,7 +63,7 @@ function getGSCstore() {
     let response = UrlFetchApp.fetch(url);
     const reqEndTime = Date.now();
     showLog(`Page request : ${(reqEndTime - reqStartTime) / 1000} Sec`); // request time
-    let $ = Cheerio.load(response.getContentText(), { decodeEntities: false });
+    let $ = Cheerio.load(response.getContentText(), {decodeEntities: false});
     //-------------------
     const dateStart = Date.now();
     const directionsList = [];
@@ -92,7 +103,7 @@ function getGSCstore() {
             itemList.urlList.push($(item).eq(i).find('a').attr('href'))
             productCount++;
         }
-        totalInfo.push({ directions: directionsList[index], data: itemList })
+        totalInfo.push({directions: directionsList[index], data: itemList})
     })
     const dateEnd = Date.now();
 
@@ -143,6 +154,44 @@ function getGSCstore() {
     }
     infoSheet.getRange(`A2:B2`).setValues([[updateTimeFormat, infoObjSize]]); // 寫入更新時間
     infoSheet.getRange(`B3`).setValue(JSON.stringify(infoArr)); // 寫入數量
+}
+
+/**
+ *  取得出貨資訊
+ */
+function getResInfo() {
+    checkSheet();
+    const resStartTime = Date.now();
+    let response = UrlFetchApp.fetch(resUrl);
+    const reqEndTime = Date.now();
+    // showLog(`Page request : ${(reqEndTime - reqStartTime) / 1000} Sec`); // request time
+    let $ = Cheerio.load(response.getContentText(), {decodeEntities: false});
+    const totalList = []
+    const resInfoList = [];
+    $('.arrowlisting').each((i, e) => {
+        totalList.push(e)
+    })
+    $(totalList).each((i, e) => {
+        const resDate = $(e).find('#largedate').text().trim();// 最外圍的年月
+        $(e).find('#syukkagreen').each((id, el) => {
+            // syukkagreen 出貨月日  ul內是該日品項 li內是每個內容
+            const ulel = $(el).next('ul').find('li');
+            ulel.each((ind, ele) => {
+                const year = resDate.split('.')[0];
+                const month = resDate.split('.')[1];
+                const day = $(el).text().trim().split('月')[1].split('日')[0];
+                const prodName = $(ele).text().replace(/[\t\n\r]| {20}/g, '').trim()
+                const productName = prodName.split('JAN')[0];
+                const memo = $(el).text().trim().indexOf('全國') > -1 ? $(el).text().trim().split('）')[1] : ''
+                const url = `${baseUrl}${$(ele).find('a').attr('href')}`;
+                const jan = prodName.split('JAN： ')[1];
+                resInfoList.push([year, month, day, productName, url, memo, jan])
+            })
+        })
+    })
+    const resEndTime = Date.now();
+    showLog(`getResInfo : ${(resEndTime - resStartTime) / 1000} Sec`);
+    resInfoSheet.getRange(`A2:G${resInfoList.length + 1}`).setValues(resInfoList); // 寫入筆數
 }
 
 /**
@@ -200,6 +249,56 @@ function searchMonthProduct(target) {
     return contents;
 }
 
+function searchResInfo(keyword) {
+    // "year", "month", "day", "productName", "url", "memo", "jan"
+    const dateCheck = /[./]/g.test(keyword);
+    const productList = resInfoSheet.getRange(`A2:G${resInfoSheet.getLastRow()}`).getDisplayValues();
+    let returnObj = []
+    let maxItem = 50;
+    if (dateCheck) {
+        // 搜尋日期
+        const dateData = keyword.split(/[./]/g);
+        let searchType = -1;
+        switch (dateData.length) {
+            case 2: // 年月 月日
+                if (dateData[0] > 12 && dateData[0].length === 2) searchType = 0 //大於12必是年份
+                if (dateData[0] <= 12 && dateData[1] <= 31) searchType = 1 // 月份少於12 日期少於31 必是月日
+                showLog(`search type : ${searchType}`);
+                switch (searchType) {
+                    case -1: //四位數的年份
+                        returnObj = productList.filter((elem) => elem[0] === dateData[0] && elem[1] === dateData[1])
+                        break;
+                    case 0: // 兩位數的年份 +2000
+                        returnObj = productList.filter((elem) => elem[0] === (parseInt(dateData[0]) + 2000).toString() && elem[1] === dateData[1]);
+                        break;
+                    case 1: // 月日
+                        returnObj = productList.filter((elem) => elem[1] === dateData[1] && elem[2] === dateData[2])
+                        break;
+                    default : // 我是誰 為什麼我在這
+                        showLog(`searchResInfo: error keyword "${keyword}"`);
+                        break;
+                }
+                break;
+            case 3: // 年月日
+                dateData[0] = dateData[0].length === 2 ? (parseInt(dateData[0]) + 2000).toString() : dateData[0];
+                returnObj = productList.filter((elem) => elem[0] === dateData[0] && elem[1] === dateData[1] && elem[2] === dateData[2])
+                break;
+        }
+        returnObj = returnObj.length > maxItem ? returnObj.slice(0, maxItem) : returnObj;
+        const productNameList = returnObj.map((e, i) => `品項：${e[3]}\t 出貨日：${e[0]}/${e[1]}/${e[2]}`).join('\n')
+        returnObj = `「${keyword}」的出貨列表\n${productNameList}`
+    } else {
+        showLog(`search type item: ${returnObj.length}`);
+        // 搜尋品名
+        returnObj = productList.filter((elem) => elem[3].indexOf(keyword) > -1);
+        returnObj = returnObj.length > maxItem ? returnObj.slice(0, maxItem) : returnObj;
+        const productNameList = returnObj.map((e, i) => `品項：${e[3]} \t 出貨日：${e[0]}/${e[1]}/${e[2]}`).join('\n')
+        returnObj = `「${keyword}」的查詢結果如下\n${productNameList}`;
+    }
+
+    return returnObj;
+}
+
 /**
  * 比較差異時 有新商品上架
  * check have new product
@@ -248,13 +347,25 @@ function startCommand(id, text) {
 }
 
 /**
- * 刪除所有資料
+ * 刪除所有商品資料
  * del all row date
  */
 function deleteRow() {
     if (productSheet.getLastRow() - 1 !== 0) {
         for (let i = 0; i < productSheet.getLastRow(); i++) { // 取得最後一列長度
             productSheet.deleteRows(2, productSheet.getLastRow() - 1); // key不刪除 從第一筆資料刪除到最後一筆資料
+        }
+    }
+}
+
+/**
+ * 刪除所有出貨資料
+ * del all row date
+ */
+function deleteResInfoRow() {
+    if (resInfoSheet.getLastRow() - 1 !== 0) {
+        for (let i = 0; i < resInfoSheet.getLastRow(); i++) { // 取得最後一列長度
+            resInfoSheet.deleteRows(2, resInfoSheet.getLastRow() - 1); // key不刪除 從第一筆資料刪除到最後一筆資料
         }
     }
 }
@@ -274,9 +385,10 @@ function doPost(e) {
     if (userMessage == '' || userMessage == undefined) return; // 傳空訊息或是非文字訊息
     let searchType = -1;
     const commandType = {
-        allProduct: { index: 0, keyword: "!" }, // 全商品(現年度)搜尋
-        month: { index: 1, keyword: "@" }, // 該月商品搜尋
-        command: { index: 2, keyword: "#" } // 指令操控
+        allProduct: {index: 0, keyword: "!"}, // 全商品(現年度)搜尋
+        month: {index: 1, keyword: "@"}, // 該月商品搜尋
+        command: {index: 2, keyword: "#"}, // 指令操控
+        resCommand: {index: 3, keyword: "?"} // 出貨情報
     }
     switch (userMessage[0]) {
         case commandType.allProduct.keyword: // 全搜尋
@@ -288,21 +400,31 @@ function doPost(e) {
         case commandType.command.keyword: // 指令
             searchType = commandType.command.index;
             break;
+        case commandType.resCommand.keyword:
+            searchType = commandType.resCommand.index;
+            break
         default:
             break;
     }
     if (searchType === -1) return; //非指令
     let proList;
-    let searchTarger = userMessage.replace(commandType.allProduct.keyword, "").replace(commandType.month.keyword, "").replace(commandType.command.keyword, "");
+    let searchTarget = userMessage.replace(commandType.allProduct.keyword, '').replace(commandType.month.keyword, '').replace(commandType.command.keyword, '').replace(commandType.resCommand.keyword, '');
     switch (searchType) {
         case commandType.allProduct.index:
-            proList = searchALLProduct(searchTarger);
+            proList = searchALLProduct(searchTarget);
             break;
         case commandType.month.index:
-            proList = searchMonthProduct(searchTarger);
+            proList = searchMonthProduct(searchTarget);
             break;
         case commandType.command.index:
-            proList = startCommand(userId, searchTarger);
+            proList = startCommand(userId, searchTarget);
+            break;
+        case commandType.resCommand.index:
+            if(searchTarget.trim().length === 0){
+                proList = resReadMe();
+            } else {
+                proList = searchResInfo(searchTarget);
+            }
             break;
         default:
             break;
@@ -319,6 +441,9 @@ function doPost(e) {
             case commandType.command.index:
                 msgObj = proList[0];
                 break;
+            case commandType.resCommand.index:
+                msgObj = textMsg(proList);
+                break;
         }
     }
     let data = {
@@ -329,7 +454,7 @@ function doPost(e) {
     };
     let option = {
         method: 'post',
-        headers: { Authorization: 'Bearer ' + lineToken },
+        headers: {Authorization: 'Bearer ' + lineToken},
         contentType: 'application/json',
         payload: JSON.stringify(data)
     };
@@ -426,10 +551,15 @@ function showLog(msg) {
     Logger.log(msg);
 }
 
+function resReadMe (){
+    return `出貨查詢操作說明:\n使用'?'關鍵字作為前綴時可查詢出貨商品\n舉例：\n使用「?2023/5」時可以查詢23年5月的出貨商品列表\n使用「?品名」時可以查詢有該內容的出貨資訊`
+}
+
 
 /** ------------------------------------------------------------------------------------------------------
  *  Line Message Block (懶得製作成物件)
  * -------------------------------------------------------------------------------------------------------*/
+
 
 function notFoundMsgModel() {
     const msg = {};
@@ -466,6 +596,13 @@ function flexTitle(body) {
     title.contents = {};
     title.contents.type = 'carousel';
     title.contents.contents = body;
+    return title
+}
+
+function textMsg(body) {
+    const title = {}
+    title.type = 'text';
+    title.text = body;
     return title
 }
 

@@ -25,8 +25,8 @@ good smile crawler
     `1ReeQ6WO8kKNxoaA_O0XEQ589cIrRvEBA9qcWpNqdOP17i47u6N9M5Xh0`     
     按下確定選擇最新的版本的cheerio     
 2. 複製 [Index.gs](https://github.com/EndRollModel/GSC_crawler/blob/master/index.gs) 內的程式碼貼上於右側程式編輯區 按下ctrl + s儲存程式碼
-3. 將試算表id貼上至程式碼第五行內 `let spreadsheet = SpreadsheetApp.openById('貼到這裡')`         
-4. 將Line Channel access token 貼至第六行 `let lineToken = '貼到這裡'`   
+   3. 將試算表id貼上至程式碼第五行內 `let spreadsheet = SpreadsheetApp.openById('貼到這裡')` 或「專案設定」 「指令碼屬性」內 屬性sheetId 值貼上id     
+      4. 將Line Channel access token 貼至第六行 `let lineToken = '貼到這裡'`   或「專案設定」「指令碼屬性」內 lineToken 值貼上token    
 5. 選擇上方函式內容 選擇 getGSCstore 點選一下執行 等待執行完成 現在可以檢查一下試算表內是否已經有資料了   
 6. 若有資料了左側選單觸發條件（時鐘圖案） 新增觸發條件選定執行功能getGSCstore,上端,時間驅動,小時計時器,一小時驅動(若想快一點爬也可以調整快一點 但建議不要低於15分鐘 因為好微笑通常不會頻繁更新)      
 7. 點選部署 > 新增部署作業 > 誰可以存取改為任何人 按下部署 完成後複製網頁應用程式的網址 
@@ -35,11 +35,13 @@ good smile crawler
 10. 需要接收訊息的人對機器人呼叫`#紀錄`or`#record` 登記使用者名稱後 之後機器人會主動通知
 
 ### ＊注意事項       
-1. 使用#紀錄的人盡量不要大於5人 因好微笑當月發布商品時若超過一百件 Linebot主動推播訊息無法超過500則(免費額度) 超過額度時則不發送訊息
+1. 使用#紀錄的人盡量不要太多 Linebot主動推播訊息無法超過200則(原500則/免費額度) 超過額度時則不發送訊息
 
 2. 若架設有困難的人 可以google [gas line bot] 等相關資訊確認
 
-3. 定時功能建議於整點2-5分之間設定 會比較快速抓取該內容
+3. 定時功能建議於11點整點2-5分(GMT+8)之間設定 會比較快速抓取該內容
+
+4. 定時器約定在4-12小時一次即可 不需頻繁更新 否則可能會被視為攻擊
 
 ### 使用技術
 本篇提供懶人架設法 若有需要自行修改其內容時請參考以下來源       
